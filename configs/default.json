@@ -1,0 +1,62 @@
+{
+  "auth": {
+    "mode": "offline",
+    "username": "Player",
+    "email": "",
+    "microsoft_token": null
+  },
+  "minecraft": {
+    "version": "1.8.9",
+    "loader": "Forge",
+    "ram_mb": 2048,
+    "java_args": "-XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:MaxGCPauseMillis=50"
+  },
+  "killaura": {
+    "enabled": false,
+    "range": 3.5,
+    "fov": 120.0,
+    "min_cps": 8.0,
+    "max_cps": 14.0,
+    "smooth": 0.15,
+    "multi_target": false,
+    "through_walls": false
+  },
+  "visuals": {
+    "pulse_enabled": true,
+    "pulse_color": [255, 50, 50],
+    "pulse_speed": 1.5,
+    "pulse_size": 40,
+    "pulse_opacity": 180,
+    "rili_enabled": true,
+    "box_enabled": true,
+    "box_color": [255, 50, 50],
+    "box_style": "Corners",
+    "box_thickness": 2,
+    "tracers_enabled": true,
+    "tracers_color": [255, 255, 255],
+    "health_bar_enabled": true,
+    "health_text": true,
+    "armor_bar_enabled": true,
+    "name_esp_enabled": true,
+    "radar_enabled": true,
+    "radar_size": 120,
+    "crosshair_enabled": true,
+    "crosshair_dynamic": true
+  },
+  "hud": {
+    "enabled": true,
+    "target_info": true,
+    "cps_graph": true,
+    "combo": true,
+    "watermark": true,
+    "keybinds": true
+  },
+  "hotkeys": {
+    "menu": "insert",
+    "killaura": "r",
+    "visuals": "g",
+    "hud": "h"
+  },
+  "theme": "dark",
+  "fps_limit": 240
+}
