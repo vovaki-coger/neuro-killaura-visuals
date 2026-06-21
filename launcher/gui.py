@@ -73,7 +73,7 @@ class LauncherApp:
         )
         ver_label.pack(pady=(0, 20))
 
-        ctk.CTkSeparator(self.sidebar, orientation="horizontal").pack(fill="x", padx=16)
+        ctk.CTkFrame(self.sidebar, height=1, fg_color="#2a2a32").pack(fill="x", padx=16, pady=4)
 
         self._nav_buttons: dict[str, ctk.CTkButton] = {}
         nav_items = [
@@ -380,7 +380,7 @@ class LauncherApp:
         self._slider_row(scroll, "Размер", "pulse_size", 10, 100)
         self._slider_row(scroll, "Прозрачность", "pulse_opacity", 30, 255, is_int=True)
 
-        ctk.CTkSeparator(scroll, orientation="horizontal").pack(fill="x", pady=10)
+        ctk.CTkFrame(scroll, height=1, fg_color="#2a2a32").pack(fill="x", pady=10)
 
         # Rili ESP
         self._vis_section(scroll, "📦 Rili ESP", [
@@ -393,7 +393,7 @@ class LauncherApp:
         ])
         self._color_row(scroll, "Цвет бокса", "box_color")
 
-        ctk.CTkSeparator(scroll, orientation="horizontal").pack(fill="x", pady=10)
+        ctk.CTkFrame(scroll, height=1, fg_color="#2a2a32").pack(fill="x", pady=10)
 
         self._vis_section(scroll, "📡 Radar & HUD", [
             ("radar_enabled", "Radar (2D)"),
@@ -402,7 +402,7 @@ class LauncherApp:
         ])
 
         # Canvas preview
-        ctk.CTkSeparator(scroll, orientation="horizontal").pack(fill="x", pady=10)
+        ctk.CTkFrame(scroll, height=1, fg_color="#2a2a32").pack(fill="x", pady=10)
         ctk.CTkLabel(scroll, text="🖼  Превью (демо)", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color="#aaaaaa").pack(anchor="w", pady=(0, 6))
         preview_frame = ctk.CTkFrame(scroll, fg_color="#0a0a0c", corner_radius=8)
