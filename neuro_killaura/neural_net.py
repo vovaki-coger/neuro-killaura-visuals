@@ -53,8 +53,13 @@ def generate_synthetic_weights(model: NeuroKillAuraNet) -> None:
     with torch.no_grad():
         for name, param in model.named_parameters():
             if "weight" in name:
-                nn.init.xavier_uniform_(param)
-                param.data *= 0.3
+                if param.dim() >= 2:
+                    # Linear layers — xavier works on 2D+ tensors
+                    nn.init.xavier_uniform_(param)
+                    param.data *= 0.3
+                else:
+                    # LayerNorm weight (1D) — initialize to ones
+                    nn.init.ones_(param)
             elif "bias" in name:
                 nn.init.zeros_(param)
 
