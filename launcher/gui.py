@@ -619,13 +619,70 @@ class LauncherApp:
         if not self._profile:
             messagebox.showwarning("Не авторизован", "Сначала войдите в аккаунт на вкладке Аккаунт")
             return
+
         ver = self.ver_var.get()
         loader = self.loader_var.get()
         ram_str = self.ram_var.get()
         ram = RAM_VALUES[RAM_OPTIONS.index(ram_str)]
+
         self._log(f"[Launcher] Запуск Minecraft {ver} ({loader}) RAM={ram_str}...")
-        self.status_bar.configure(text=f"Запуск Minecraft {ver} ({loader})...")
-        self._log("[Launcher] В реальной сборке здесь запускается java -Xmx{ram}m ...")
+        self.launch_btn.configure(state="disabled", text="⏳  Загрузка...")
+        self.status_bar.configure(text=f"Подготовка Minecraft {ver}...")
+
+        def _do_launch():
+            try:
+                import minecraft_launcher_lib as mll
+
+                mc_dir = os.path.join(os.path.expanduser("~"), ".minecraft_neuro")
+                os.makedirs(mc_dir, exist_ok=True)
+
+                def _set_status(s):
+                    self.root.after(0, lambda v=s: self.status_bar.configure(text=v))
+
+                callback = {
+                    "setStatus": _set_status,
+                    "setMax": lambda _: None,
+                    "setProgress": lambda _: None,
+                }
+
+                installed_ids = [v["id"] for v in mll.utils.get_installed_versions(mc_dir)]
+                if ver not in installed_ids:
+                    self._log(f"[Launcher] Скачиваю Minecraft {ver}... (может занять несколько минут)")
+                    _set_status(f"Скачиваю Minecraft {ver}...")
+                    mll.install.install_minecraft_version(ver, mc_dir, callback=callback)
+                    self._log(f"[Launcher] Minecraft {ver} установлен.")
+
+                profile = self._profile
+                options = {
+                    "username": profile.get("username", "Player"),
+                    "uuid": profile.get("uuid", "00000000-0000-0000-0000-000000000000"),
+                    "token": profile.get("token", "offline-token"),
+                    "jvmArguments": [f"-Xmx{ram}m", "-Xms512m"],
+                }
+
+                command = mll.command.get_minecraft_command(ver, mc_dir, options)
+                self._log(f"[Launcher] Запускаю (Java + Minecraft {ver})...")
+
+                self.root.after(0, lambda: self.status_bar.configure(text=f"Minecraft {ver} запущен!"))
+                self.root.after(0, lambda: self.launch_btn.configure(state="normal", text="▶  ЗАПУСТИТЬ"))
+
+                proc = subprocess.Popen(command, cwd=mc_dir)
+                self._log(f"[Launcher] ✅ Minecraft запущен (PID {proc.pid})")
+
+            except ImportError:
+                err = "minecraft-launcher-lib не найден.\nВ .exe он уже включён. При запуске из исходников: pip install minecraft-launcher-lib"
+                self._log(f"[Launcher] ❌ {err}")
+                self.root.after(0, lambda: messagebox.showerror("Ошибка зависимости", err))
+                self.root.after(0, lambda: self.launch_btn.configure(state="normal", text="▶  ЗАПУСТИТЬ"))
+                self.root.after(0, lambda: self.status_bar.configure(text="Ошибка зависимости"))
+
+            except Exception as e:
+                self._log(f"[Launcher] ❌ Ошибка запуска: {e}")
+                self.root.after(0, lambda err=str(e): messagebox.showerror("Ошибка запуска", err))
+                self.root.after(0, lambda: self.launch_btn.configure(state="normal", text="▶  ЗАПУСТИТЬ"))
+                self.root.after(0, lambda err=str(e): self.status_bar.configure(text=f"Ошибка: {err}"))
+
+        threading.Thread(target=_do_launch, daemon=True).start()
 
     def _launch_overlay_demo(self) -> None:
         self._log("[Overlay] Запуск демо-оверлея...")
