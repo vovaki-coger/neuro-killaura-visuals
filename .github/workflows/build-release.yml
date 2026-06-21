@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v2.0.1)'
+        required: false
+        default: 'v2.0.0'
 
 permissions:
   contents: write
@@ -12,6 +17,7 @@ permissions:
 jobs:
   build-windows:
     runs-on: windows-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,6 +32,8 @@ jobs:
         with:
           path: ~\AppData\Local\pip\Cache
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
@@ -33,30 +41,48 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Generate synthetic model weights
+      - name: Verify imports
         run: |
-          python -c "
-          import os, torch
-          from neuro_killaura.neural_net import NeuroKillAuraNet, generate_synthetic_weights
-          model = NeuroKillAuraNet()
-          generate_synthetic_weights(model)
-          os.makedirs('models', exist_ok=True)
-          torch.save(model.state_dict(), 'models/aim_model.pth')
-          print('Weights generated')
-          "
+          python -c "import customtkinter; print('customtkinter OK')"
+          python -c "import torch; print('torch OK:', torch.__version__)"
+          python -c "import pygame; print('pygame OK')"
+          python -c "import numpy; print('numpy OK')"
+          python -c "import PIL; print('PIL OK')"
+
+      - name: Generate synthetic model weights
+        run: python generate_weights.py
 
       - name: Build EXE with PyInstaller
         run: |
-          pyinstaller neuro_killaura.spec --noconfirm --clean
+          pyinstaller neuro_killaura.spec --noconfirm --clean --log-level WARN
+
+      - name: Verify build output
+        run: |
+          dir dist\NeuroKillAura\
+          echo "Build successful!"
 
       - name: Archive release
+        shell: pwsh
         run: |
-          Compress-Archive -Path dist\NeuroKillAura\ -DestinationPath dist\NeuroKillAura-Windows-x64.zip
+          Compress-Archive -Path dist\NeuroKillAura\ -DestinationPath dist\NeuroKillAura-Windows-x64.zip -Force
+          echo "Archive size: $((Get-Item dist\NeuroKillAura-Windows-x64.zip).Length / 1MB) MB"
 
-      - name: Get tag name
+      - name: Determine release tag
         id: tag
         shell: bash
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "TAG=${{ github.event.inputs.version || 'v2.0.0' }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Delete existing release (if any)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete ${{ steps.tag.outputs.TAG }} --yes 2>/dev/null || true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -66,31 +92,31 @@ jobs:
           body: |
             ## ⚡ Neuro KillAura Launcher ${{ steps.tag.outputs.TAG }}
 
-            ### Установка
-            1. Скачай `NeuroKillAura-Windows-x64.zip`
-            2. Распакуй куда угодно
+            ### 📥 Установка
+            1. Скачай `NeuroKillAura-Windows-x64.zip` ниже
+            2. Распакуй в любую папку
             3. Запусти `NeuroKillAura.exe`
-            4. Войди в аккаунт и нажми **Запустить**
+            4. Войди в аккаунт → нажми **Запустить**
 
-            ### Горячие клавиши
+            > Требуется Windows 10/11 x64. GPU не нужен (CPU достаточно).
+
+            ### ⌨️ Горячие клавиши
             | Клавиша | Действие |
-            |---------|----------|
+            |---------|---------|
             | `INSERT` | Открыть/закрыть меню |
             | `R` | Вкл/выкл KillAura |
             | `G` | Вкл/выкл визуалы |
             | `H` | Вкл/выкл HUD |
             | `ESC` | Выход |
 
-            ### Компоненты
-            - **Лаунчер** — CustomTkinter GUI с авторизацией
-            - **Нейросеть** — PyTorch MLP (16→64→32→4)
-            - **Pulse Visuals** — пульсирующие круги, частицы, glow
-            - **Rili Visuals** — Box ESP, Tracers, Health/Armor bars, Radar
-
-            ### Требования
-            - Windows 10/11 x64
-            - ≥4 GB RAM
-            - GPU опционально (CUDA ускоряет нейросеть)
+            ### 🧩 Компоненты
+            - **Лаунчер** — CustomTkinter, темы dark/light/purple
+            - **Нейросеть** — PyTorch MLP 16→64→32→4, human-like aim
+            - **Авторизация** — Microsoft OAuth, Mojang, Оффлайн
+            - **Pulse Visuals** — пульсирующие круги, частицы, hit waves
+            - **Rili ESP** — Box ESP, Tracers, Health/Armor bars, Radar, Crosshair
+            - **HUD** — CPS-график, combo, watermark, keybinds
           files: dist/NeuroKillAura-Windows-x64.zip
           draft: false
           prerelease: false
+          make_latest: true
