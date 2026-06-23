@@ -669,6 +669,41 @@ class LauncherApp:
                 proc = subprocess.Popen(command, cwd=mc_dir)
                 self._log(f"[Launcher] ✅ Minecraft запущен (PID {proc.pid})")
 
+                # Запускаем KillAura воркер и оверлей через 8 секунд
+                # (даём Minecraft время загрузиться)
+                def _start_modules():
+                    time.sleep(8)
+                    root_dir = os.path.dirname(os.path.dirname(__file__))
+
+                    # KillAura Worker
+                    ka_script = os.path.join(root_dir, "neuro_killaura", "killaura_worker.py")
+                    try:
+                        self._ka_proc = subprocess.Popen(
+                            [sys.executable, ka_script],
+                            cwd=root_dir,
+                            creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0,
+                        )
+                        self._log(f"[KillAura] Воркер запущен (PID {self._ka_proc.pid}). Хоткеи: R=вкл G=визуалы H=HUD")
+                    except Exception as e:
+                        self._log(f"[KillAura] Ошибка запуска воркера: {e}")
+
+                    # Overlay
+                    if self.vis_enabled_var.get():
+                        ov_script = os.path.join(root_dir, "visuals", "overlay_main.py")
+                        try:
+                            self._overlay_proc = subprocess.Popen(
+                                [sys.executable, ov_script],
+                                cwd=root_dir,
+                            )
+                            self._log(f"[Overlay] Прозрачный оверлей запущен (PID {self._overlay_proc.pid})")
+                        except Exception as e:
+                            self._log(f"[Overlay] Ошибка запуска оверлея: {e}")
+
+                    self.root.after(0, lambda: self.status_bar.configure(
+                        text=f"Minecraft {ver} + KillAura + Overlay активны"))
+
+                threading.Thread(target=_start_modules, daemon=True).start()
+
             except ImportError:
                 err = "minecraft-launcher-lib не найден.\nВ .exe он уже включён. При запуске из исходников: pip install minecraft-launcher-lib"
                 self._log(f"[Launcher] ❌ {err}")
